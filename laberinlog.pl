@@ -11,39 +11,45 @@
  % * MaxObjetivos es la cantidad de objetivos a repartir a cada jugador
 laberinlog(_JugadorVerde,_JugadorRojo,_MaxObjetivos):-
     gr_crear(Ventana,[boton('Salir',salir)]),    
-    armarTablero(Tablero,PiezaExtra),
-    loop(Ventana,Tablero,PiezaExtra),
+    armar_tablero(Tablero,PiezaExtra),
+    repartir_objetivos(_MaxObjetivos,ObjetivosVerde,ObjetivosRojo),
+    loop(Ventana,Tablero,PiezaExtra,ObjetivosVerde,ObjetivosRojo,shift),
     gr_destruir(Ventana).
 
- % loop/3, % +Ventana, +Tablero, +PiezaExtra
+ % loop/6, % +Ventana, +Tablero, +PiezaExtra, +ObjetivosVerde, +ObjetivosRojo, +Fase
  % Loop principal del juego
-loop(Ventana,Tablero,PiezaExtra):-
+loop(Ventana,Tablero,PiezaExtra,ObjetivosVerde,ObjetivosRojo,Fase):-
+    % turno jugador verde
     gr_dibujar_tablero(Ventana, Tablero, PiezaExtra),
-    gr_dibujar_objetivos(Ventana,[buho]),
+    gr_dibujar_objetivos(Ventana,ObjetivosVerde),
 	gr_evento(Ventana,E),!,
-    procesar_evento(E,Ventana,Tablero,PiezaExtra).
+    procesar_evento(E,Ventana,Tablero,PiezaExtra,ObjetivosVerde,ObjetivosRojo,Fase).
 
  % procesar_evento/4, % +Evento, +Ventana, +Tablero, +PiezaExtra
  % Atiende los eventos del usuario
-procesar_evento(salir,_,_,_):-!.
-procesar_evento(click(I,J),Ventana,Tablero,PiezaExtra):-
+procesar_evento(salir,_,_,_,_,_,_):-!.
+procesar_evento(click(I,J),Ventana,Tablero,PiezaExtra,ObjetivosVerde,ObjetivosRojo,shift):-
     atomic_list_concat(['Click en fila ',I,', columna ', J],Texto),
     gr_estado(Ventana,Texto),
-    loop(Ventana,Tablero,PiezaExtra).
-procesar_evento(rotar_izq,Ventana,Tablero,pieza(F,T,O)):-!,
+    loop(Ventana,Tablero,PiezaExtra,ObjetivosVerde,ObjetivosRojo,movimiento).
+procesar_evento(click(I,J),Ventana,Tablero,PiezaExtra,ObjetivosVerde,ObjetivosRojo,movimiento):-
+    atomic_list_concat(['Click en fila ',I,', columna ', J],Texto),
+    gr_estado(Ventana,Texto),
+    loop(Ventana,Tablero,PiezaExtra,ObjetivosVerde,ObjetivosRojo,shift).
+procesar_evento(rotar_izq,Ventana,Tablero,pieza(F,T,O),ObjetivosVerde,ObjetivosRojo,shift):-!,
     gr_estado(Ventana,'Rotar a la izquierda'),
     rotar_izquierda(O,O2),
-    loop(Ventana,Tablero,pieza(F,T,O2)).
-procesar_evento(rotar_der,Ventana,Tablero,pieza(F,T,O)):-!,
+    loop(Ventana,Tablero,pieza(F,T,O2),ObjetivosVerde,ObjetivosRojo,shift).
+procesar_evento(rotar_der,Ventana,Tablero,pieza(F,T,O),ObjetivosVerde,ObjetivosRojo,shift):-!,
     gr_estado(Ventana,'Rotar a la derecha'),
     rotar_derecha(O,O2),
-    loop(Ventana,Tablero,pieza(F,T,O2)).
-procesar_evento(_,Ventana,Tablero,PiezaExtra):-!,
-    loop(Ventana,Tablero,PiezaExtra).
+    loop(Ventana,Tablero,pieza(F,T,O2),ObjetivosVerde,ObjetivosRojo,shift).
+procesar_evento(_,Ventana,Tablero,PiezaExtra,ObjetivosVerde,ObjetivosRojo,Evento):-!,
+    loop(Ventana,Tablero,PiezaExtra,ObjetivosVerde,ObjetivosRojo,Evento).
 
-% armarTablero/2, % -Tablero, -PiezaExtra
+% armar_tablero/2, % -Tablero, -PiezaExtra
 % Crea un tablero de juego inicial y retorna la pieza PiezaExtra
-armarTablero([
+armar_tablero([
     [casillero(F1,[verde]),casillero(M1,[]),casillero(F2,[]),casillero(M2,[]),casillero(F3,[]),casillero(M3,[]),casillero(F4,[rojo])],
     [casillero(M4,[]),casillero(M5,[]),casillero(M6,[]),casillero(M7,[]),casillero(M8,[]),casillero(M9,[]),casillero(M10,[])],
     [casillero(F5,[]),casillero(M11,[]),casillero(F6,[]),casillero(M12,[]),casillero(F7,[]),casillero(M13,[]),casillero(F8,[])],
@@ -128,6 +134,35 @@ orientar_random([pieza(Topologia,Figura)|T],[pieza(Topologia,Figura,Orientacion)
     random_select(Orientacion,[n,s,e,w],_),
     orientar_random(T,T2).
 orientar_random([],[]).
+
+% repartir_objetivos/3, % +MaxObjetivos, -Verde, -Rojo
+% Reparte MaxObjetivos entre 2 listas
+% Si MaxObjetivos es 0, reparte todos los objetivos
+repartir_objetivos(MaxObjetivos,Verde,Rojo):-
+    objetivos(Objetivos),
+    repartir_objetivos_rec(MaxObjetivos,Objetivos,Verde,Rojo).
+repartir_objetivos(0,Verde,Rojo):-
+    objetivos(Objetivos),
+    repartir_objetivos_rec(Objetivos,Verde,Rojo).
+
+
+% repartir_objetivos_rec/4, % +Max, +Objetivos, -Verde, -Rojo
+% Reparte aleatoriamente Max objetivos en las listas Verde y Rojo
+repartir_objetivos_rec(0,_,[],[]).
+repartir_objetivos_rec(Max,Objetivos,[HV|TV],[HR|TR]):-
+    random_select(HV,Objetivos,Objetivos2),
+    random_select(HR,Objetivos2,Objetivos3),
+    X is Max - 1,
+    repartir_objetivos_rec(X,Objetivos3,TV,TR).
+
+
+% repartir_objetivos_rec/3, % +Objetivos, -Verde, -Rojo
+% Reparte aleatoriamente todos los objetivos en las listas Verde y Rojo
+repartir_objetivos_rec(_,[],[],[]).
+repartir_objetivos_rec(Objetivos,[HV|TV],[HR|TR]):-
+    random_select(HV,Objetivos,Objetivos2),
+    random_select(HR,Objetivos2,Objetivos3),
+    repartir_objetivos_rec(Objetivos3,TV,TR).
 
 
 % rotar_derecha/2, % +Orientacion, -NuevaOrientacion
