@@ -10,34 +10,36 @@
  % * JugadorVerde y JugadorRojo pueden valer humano|maquina
  % * MaxObjetivos es la cantidad de objetivos a repartir a cada jugador
 laberinlog(_JugadorVerde,_JugadorRojo,_MaxObjetivos):-
-    gr_crear(Ventana,[boton('Salir',salir)]),
-    loop(Ventana),
+    gr_crear(Ventana,[boton('Salir',salir)]),    
+    armarTablero(Tablero,PiezaExtra),
+    loop(Ventana,Tablero,PiezaExtra),
     gr_destruir(Ventana).
 
- % loop/1, % +Ventana
+ % loop/3, % +Ventana, +Tablero, +PiezaExtra
  % Loop principal del juego
-loop(Ventana):-
-    armarTablero(Tablero,PiezaExtra),
+loop(Ventana,Tablero,PiezaExtra):-
     gr_dibujar_tablero(Ventana, Tablero, PiezaExtra),
     gr_dibujar_objetivos(Ventana,[buho]),
 	gr_evento(Ventana,E),!,
-    procesar_evento(E,Ventana).
+    procesar_evento(E,Ventana,Tablero,PiezaExtra).
 
- % procesar_evento/2, % +Evento, +Ventana
+ % procesar_evento/4, % +Evento, +Ventana, +Tablero, +PiezaExtra
  % Atiende los eventos del usuario
-procesar_evento(salir,_):-!.
-procesar_evento(click(I,J),Ventana):-
+procesar_evento(salir,_,_,_):-!.
+procesar_evento(click(I,J),Ventana,Tablero,PiezaExtra):-
     atomic_list_concat(['Click en fila ',I,', columna ', J],Texto),
     gr_estado(Ventana,Texto),
-    loop(Ventana).
-procesar_evento(rotar_izq,Ventana):-!,
+    loop(Ventana,Tablero,PiezaExtra).
+procesar_evento(rotar_izq,Ventana,Tablero,pieza(F,T,O)):-!,
     gr_estado(Ventana,'Rotar a la izquierda'),
-    loop(Ventana).
-procesar_evento(rotar_der,Ventana):-!,
+    rotar_izquierda(O,O2),
+    loop(Ventana,Tablero,pieza(F,T,O2)).
+procesar_evento(rotar_der,Ventana,Tablero,pieza(F,T,O)):-!,
     gr_estado(Ventana,'Rotar a la derecha'),
-    loop(Ventana).
-procesar_evento(_,Ventana):-!,
-    loop(Ventana).
+    rotar_derecha(O,O2),
+    loop(Ventana,Tablero,pieza(F,T,O2)).
+procesar_evento(_,Ventana,Tablero,PiezaExtra):-!,
+    loop(Ventana,Tablero,PiezaExtra).
 
 % armarTablero/2, % -Tablero, -PiezaExtra
 % Crea un tablero de juego inicial y retorna la pieza PiezaExtra
@@ -128,3 +130,16 @@ orientar_random([pieza(Topologia,Figura)|T],[pieza(Topologia,Figura,Orientacion)
 orientar_random([],[]).
 
 
+% rotar_derecha/2, % +Orientacion, -NuevaOrientacion
+% NuevaOrientacion es el resultado de rotar a la derecha la Orientacion
+rotar_derecha(s,w).
+rotar_derecha(w,n).
+rotar_derecha(n,e).
+rotar_derecha(e,s).
+
+% rotar_izquierda/2, % +Orientacion, -NuevaOrientacion
+% NuevaOrientacion es el resultado de rotar a la izquierda la Orientacion
+rotar_izquierda(s,e).
+rotar_izquierda(e,n).
+rotar_izquierda(n,w).
+rotar_izquierda(w,s).
