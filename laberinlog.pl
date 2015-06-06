@@ -1,4 +1,5 @@
 :- use_module(graficos).
+:- use_module(funciones_matrices).
 :- ensure_loaded(def).
 
 % ---------------------
@@ -31,7 +32,10 @@ procesar_evento(salir,_,_,_,_,_,_):-!.
 procesar_evento(click(I,J),Ventana,Tablero,PiezaExtra,ObjetivosVerde,ObjetivosRojo,shift):-
     atomic_list_concat(['Click en fila ',I,', columna ', J],Texto),
     gr_estado(Ventana,Texto),
-    loop(Ventana,Tablero,PiezaExtra,ObjetivosVerde,ObjetivosRojo,movimiento).
+    shiftTablero(Tablero,I,J,PiezaExtra,TableroShifteado),!,
+    valor_celda(I,J,TableroShifteado,casillero(InfoPieza,Jugadores)),
+    nuevo_valor_celda(I,J,TableroShifteado,casillero(PiezaExtra,Jugadores),NuevoTablero),
+    loop(Ventana,NuevoTablero,InfoPieza,ObjetivosVerde,ObjetivosRojo,movimiento).
 procesar_evento(click(I,J),Ventana,Tablero,PiezaExtra,ObjetivosVerde,ObjetivosRojo,movimiento):-
     atomic_list_concat(['Click en fila ',I,', columna ', J],Texto),
     gr_estado(Ventana,Texto),
@@ -178,3 +182,19 @@ rotar_izquierda(s,e).
 rotar_izquierda(e,n).
 rotar_izquierda(n,w).
 rotar_izquierda(w,s).
+
+% shiftTablero/5, % +Tablero, +I, +J, +Pieza, -Resultado
+% Resultado es el Tablero luego de introducir la Pieza en la posicion (I,J) y realizar el shift correspondiente.
+% Si (I,J) no es una de las celdas validas para insertar pieza, no se realiza el shift y da falso
+shiftTablero(Tablero,1,J,PiezaExtra,Resultado):-
+    0 is mod(J,2),
+    shift_columna(J,1,Tablero,Resultado). 
+shiftTablero(Tablero,7,J,PiezaExtra,Resultado):-
+    0 is mod(J,2),
+    shift_columna(J,-1,Tablero,Resultado). 
+shiftTablero(Tablero,I,1,PiezaExtra,Resultado):-
+    0 is mod(I,2),
+    shift_fila(I,1,Tablero,Resultado). 
+shiftTablero(Tablero,I,7,PiezaExtra,Resultado):-
+    0 is mod(I,2),
+    shift_fila(I,-1,Tablero,Resultado). 
